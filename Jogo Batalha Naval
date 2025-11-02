@@ -1,0 +1,311 @@
+/*
+ * Desafio Final: Batalha Naval - Habilidades de Área de Efeito (AoE)
+ *
+ * Este programa em C simula um tabuleiro de Batalha Naval 10x10
+ * e demonstra como sobrepor diferentes habilidades com áreas de efeito:
+ * Cone, Cruz e Octaedro (Losango).
+ *
+ * O programa define matrizes para cada habilidade (usando 0 e 1)
+ * e depois as aplica a um tabuleiro de jogo, marcando as áreas
+ * afetadas com um valor especial.
+ */
+
+#include <stdio.h>
+#include <stdlib.h> // Para a função abs()
+
+// --- Constantes Globais ---
+
+// Dimensões do tabuleiro principal
+#define BOARD_ROWS 10
+#define BOARD_COLS 10
+
+// Tamanho das matrizes de habilidade (deve ser ímpar para ter um centro claro)
+#define ABILITY_SIZE 5
+
+// --- Protótipos das Funções ---
+
+// Funções do Tabuleiro
+void initializeBoard(int board[BOARD_ROWS][BOARD_COLS]);
+void printBoard(int board[BOARD_ROWS][BOARD_COLS]);
+
+// Funções de Geração de Habilidades
+void createCone(int cone[ABILITY_SIZE][ABILITY_SIZE]);
+void createCross(int cross[ABILITY_SIZE][ABILITY_SIZE]);
+void createOctahedron(int octahedron[ABILITY_SIZE][ABILITY_SIZE]);
+
+// Funções de Aplicação de Habilidades
+void applyConeAbility(int board[BOARD_ROWS][BOARD_COLS], int cone[ABILITY_SIZE][ABILITY_SIZE], int originRow, int originCol);
+void applyCenteredAbility(int board[BOARD_ROWS][BOARD_COLS], int ability[ABILITY_SIZE][ABILITY_SIZE], int originRow, int originCol);
+
+// --- Função Principal ---
+
+int main() {
+    // 1. Definição do Tabuleiro e Matrizes de Habilidade
+    int board[BOARD_ROWS][BOARD_COLS];
+    int cone[ABILITY_SIZE][ABILITY_SIZE];
+    int cross[ABILITY_SIZE][ABILITY_SIZE];
+    int octahedron[ABILITY_SIZE][ABILITY_SIZE];
+
+    // 2. Criação das Matrizes de Habilidade
+    createCone(cone);
+    createCross(cross);
+    createOctahedron(octahedron);
+
+    // --- Demonstração da Habilidade CONE ---
+    
+    // Reseta o tabuleiro para um estado limpo
+    initializeBoard(board); 
+    
+    // Define o ponto de origem (topo do cone) no tabuleiro
+    int coneOriginRow = 1;
+    int coneOriginCol = 4;
+    
+    // Aplica a habilidade ao tabuleiro
+    applyConeAbility(board, cone, coneOriginRow, coneOriginCol);
+    
+    // Exibe o resultado
+    printf("### Tabuleiro com Habilidade Cone (Origem: %d, %d) ###\n", coneOriginRow, coneOriginCol);
+    printBoard(board);
+
+    // --- Demonstração da Habilidade CRUZ ---
+    
+    // Reseta o tabuleiro
+    initializeBoard(board); 
+    
+    // Define o ponto de origem (centro da cruz) no tabuleiro
+    int crossOriginRow = 5;
+    int crossOriginCol = 5;
+    
+    // Aplica a habilidade (que usa o centro como origem)
+    applyCenteredAbility(board, cross, crossOriginRow, crossOriginCol);
+    
+    // Exibe o resultado
+    printf("\n### Tabuleiro com Habilidade Cruz (Origem: %d, %d) ###\n", crossOriginRow, crossOriginCol);
+    printBoard(board);
+
+    // --- Demonstração da Habilidade OCTAEDRO (Losango) ---
+    
+    // Reseta o tabuleiro
+    initializeBoard(board); 
+    
+    // Define o ponto de origem (centro do losango) no tabuleiro
+    int octaOriginRow = 4;
+    int octaOriginCol = 7;
+    
+    // Aplica a habilidade (que usa o centro como origem)
+    applyCenteredAbility(board, octahedron, octaOriginRow, octaOriginCol);
+    
+    // Exibe o resultado
+    printf("\n### Tabuleiro com Habilidade Octaedro (Origem: %d, %d) ###\n", octaOriginRow, octaOriginCol);
+    printBoard(board);
+
+    return 0;
+}
+
+// --- Implementação das Funções ---
+
+/**
+ * @brief Inicializa o tabuleiro com água (0) e alguns navios (3).
+ * @param board O tabuleiro 10x10 a ser inicializado.
+ */
+void initializeBoard(int board[BOARD_ROWS][BOARD_COLS]) {
+    for (int i = 0; i < BOARD_ROWS; i++) {
+        for (int j = 0; j < BOARD_COLS; j++) {
+            board[i][j] = 0; // 0 = Água
+        }
+    }
+
+    // Adiciona alguns navios (3) para fins de demonstração
+    board[2][2] = 3;
+    board[2][3] = 3;
+    board[5][5] = 3; // Coincidirá com a origem da Cruz
+    board[6][5] = 3;
+    board[4][7] = 3; // Coincidirá com a origem do Octaedro
+    board[4][8] = 3;
+    board[1][4] = 3; // Coincidirá com a origem do Cone
+    board[3][4] = 3;
+}
+
+/**
+ * @brief Exibe o tabuleiro no console com caracteres especiais.
+ * ~ = Água (0)
+ * N = Navio (3)
+ * * = Área de Efeito (5)
+ * @param board O tabuleiro 10x10 a ser exibido.
+ */
+void printBoard(int board[BOARD_ROWS][BOARD_COLS]) {
+    for (int i = 0; i < BOARD_ROWS; i++) {
+        for (int j = 0; j < BOARD_COLS; j++) {
+            switch (board[i][j]) {
+                case 0:
+                    printf("~ "); // Água
+                    break;
+                case 3:
+                    printf("N "); // Navio
+                    break;
+                case 5:
+                    printf("* "); // Área de Efeito da Habilidade
+                    break;
+                default:
+                    // Exibe qualquer outro valor (para depuração)
+                    printf("%d ", board[i][j]); 
+            }
+        }
+        printf("\n"); // Nova linha ao final de cada linha do tabuleiro
+    }
+}
+
+/**
+ * @brief Cria a matriz de efeito da habilidade "Cone".
+ * A lógica usa loops aninhados e um condicional.
+ * A forma é um triângulo com o vértice no topo e centro.
+ * Ex (5x5):
+ * 0 0 1 0 0
+ * 0 1 1 1 0
+ * 1 1 1 1 1
+ * 1 1 1 1 1
+ * 1 1 1 1 1
+ * @param cone A matriz 5x5 a ser preenchida.
+ */
+void createCone(int cone[ABILITY_SIZE][ABILITY_SIZE]) {
+    int center = ABILITY_SIZE / 2;
+    for (int i = 0; i < ABILITY_SIZE; i++) {
+        for (int j = 0; j < ABILITY_SIZE; j++) {
+            // Condição do Cone: A distância horizontal da coluna central
+            // (abs(j - center)) deve ser menor ou igual à linha atual (i).
+            if (abs(j - center) <= i) {
+                cone[i][j] = 1; // Afetado
+            } else {
+                cone[i][j] = 0; // Não afetado
+            }
+        }
+    }
+}
+
+/**
+ * @brief Cria a matriz de efeito da habilidade "Cruz".
+ * A lógica usa loops aninhados e um condicional.
+ * A forma é a linha central E a coluna central.
+ * Ex (5x5):
+ * 0 0 1 0 0
+ * 0 0 1 0 0
+ * 1 1 1 1 1
+ * 0 0 1 0 0
+ * 0 0 1 0 0
+ * @param cross A matriz 5x5 a ser preenchida.
+ */
+void createCross(int cross[ABILITY_SIZE][ABILITY_SIZE]) {
+    int center = ABILITY_SIZE / 2;
+    for (int i = 0; i < ABILITY_SIZE; i++) {
+        for (int j = 0; j < ABILITY_SIZE; j++) {
+            // Condição da Cruz: Estar na linha central (i == center)
+            // OU na coluna central (j == center).
+            if (i == center || j == center) {
+                cross[i][j] = 1; // Afetado
+            } else {
+                cross[i][j] = 0; // Não afetado
+            }
+        }
+    }
+}
+
+/**
+ * @brief Cria a matriz de efeito da habilidade "Octaedro" (Losango).
+ * A lógica usa loops aninhados e um condicional.
+ * A forma é um losango (diamond) centrado.
+ * Ex (5x5):
+ * 0 0 1 0 0
+ * 0 1 1 1 0
+ * 1 1 1 1 1
+ * 0 1 1 1 0
+ * 0 0 1 0 0
+ * @param octahedron A matriz 5x5 a ser preenchida.
+ */
+void createOctahedron(int octahedron[ABILITY_SIZE][ABILITY_SIZE]) {
+    int center = ABILITY_SIZE / 2;
+    for (int i = 0; i < ABILITY_SIZE; i++) {
+        for (int j = 0; j < ABILITY_SIZE; j++) {
+            // Condição do Losango (Distância de Manhattan):
+            // A soma das distâncias absolutas da linha e coluna
+            // até o centro deve ser menor ou igual ao "raio" (center).
+            if (abs(i - center) + abs(j - center) <= center) {
+                octahedron[i][j] = 1; // Afetado
+            } else {
+                octahedron[i][j] = 0; // Não afetado
+            }
+        }
+    }
+}
+
+/**
+ * @brief Sobrepõe a matriz de habilidade CONE no tabuleiro.
+ * Esta função é especial para o cone, pois sua origem (originRow, originCol)
+ * no tabuleiro corresponde ao TOPO (0, center) da matriz de habilidade,
+ * e não ao seu centro.
+ * @param board O tabuleiro 10x10.
+ * @param cone A matriz de habilidade 5x5.
+ * @param originRow A linha no tabuleiro onde o TOPO do cone será colocado.
+ * @param originCol A coluna no tabuleiro onde o TOPO do cone será colocado.
+ */
+void applyConeAbility(int board[BOARD_ROWS][BOARD_COLS], int cone[ABILITY_SIZE][ABILITY_SIZE], int originRow, int originCol) {
+    int center = ABILITY_SIZE / 2;
+    
+    // Itera sobre a matriz de habilidade
+    for (int i = 0; i < ABILITY_SIZE; i++) {
+        for (int j = 0; j < ABILITY_SIZE; j++) {
+            
+            // Verifica se a posição (i, j) da habilidade afeta uma área (valor 1)
+            if (cone[i][j] == 1) {
+                
+                // Calcula a coordenada correspondente no tabuleiro
+                // boardRow = origem + deslocamento da linha na matriz de hab. (i)
+                // boardCol = origem + deslocamento da coluna (j - center)
+                int boardRow = originRow + i;
+                int boardCol = originCol + (j - center);
+
+                // Condicional: Verifica se a coordenada está DENTRO dos limites do tabuleiro
+                if (boardRow >= 0 && boardRow < BOARD_ROWS && boardCol >= 0 && boardCol < BOARD_COLS) {
+                    
+                    // Marca a posição no tabuleiro como afetada (5)
+                    // Nota: Isso substitui 0 (água) ou 3 (navio)
+                    board[boardRow][boardCol] = 5;
+                }
+            }
+        }
+    }
+}
+
+/**
+ * @brief Sobrepõe uma matriz de habilidade CENTRADA (Cruz, Octaedro) no tabuleiro.
+ * Esta função assume que a origem (originRow, originCol) no tabuleiro
+ * corresponde ao CENTRO (center, center) da matriz de habilidade.
+ * @param board O tabuleiro 10x10.
+ * @param ability A matriz de habilidade 5x5 (Cruz ou Octaedro).
+ * @param originRow A linha no tabuleiro onde o CENTRO da habilidade será colocado.
+ * @param originCol A coluna no tabuleiro onde o CENTRO da habilidade será colocado.
+ */
+void applyCenteredAbility(int board[BOARD_ROWS][BOARD_COLS], int ability[ABILITY_SIZE][ABILITY_SIZE], int originRow, int originCol) {
+    int center = ABILITY_SIZE / 2;
+
+    // Itera sobre a matriz de habilidade
+    for (int i = 0; i < ABILITY_SIZE; i++) {
+        for (int j = 0; j < ABILITY_SIZE; j++) {
+
+            // Verifica se a posição (i, j) da habilidade afeta uma área (valor 1)
+            if (ability[i][j] == 1) {
+                
+                // Calcula a coordenada correspondente no tabuleiro
+                // O deslocamento é relativo ao centro da matriz de hab. (i - center)
+                int boardRow = originRow + (i - center);
+                int boardCol = originCol + (j - center);
+
+                // Condicional: Verifica se a coordenada está DENTRO dos limites do tabuleiro
+                if (boardRow >= 0 && boardRow < BOARD_ROWS && boardCol >= 0 && boardCol < BOARD_COLS) {
+                    
+                    // Marca a posição no tabuleiro como afetada (5)
+                    board[boardRow][boardCol] = 5;
+                }
+            }
+        }
+    }
+}
